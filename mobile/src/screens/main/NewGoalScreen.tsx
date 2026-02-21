@@ -3,7 +3,7 @@
  * Mirrors the Next.js goal/new page with 4 steps:
  * 1. Goal Title, 2. Duration, 3. Focus Areas, 4. AI Options.
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     View,
     Text,
@@ -26,6 +26,7 @@ type NewGoalScreenProps = NativeStackScreenProps<any, any>;
 export default function NewGoalScreen({ navigation }: NewGoalScreenProps) {
     const [step, setStep] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [progress, setProgress] = useState(0);
 
     // Form data
     const [title, setTitle] = useState('');
@@ -34,8 +35,27 @@ export default function NewGoalScreen({ navigation }: NewGoalScreenProps) {
     const [startDate, setStartDate] = useState('');
     const [useAI, setUseAI] = useState(true);
 
+    useEffect(() => {
+        let interval: NodeJS.Timeout;
+        if (loading && useAI) {
+            // Fake progress advancing from 0% to 90%
+            interval = setInterval(() => {
+                setProgress((prev) => {
+                    if (prev >= 90) {
+                        clearInterval(interval);
+                        return 90;
+                    }
+                    // increment slightly faster at start, slower at end
+                    return prev + (Math.random() * 5 + 2);
+                });
+            }, 800);
+        }
+        return () => clearInterval(interval);
+    }, [loading, useAI]);
+
     const handleSubmit = async () => {
         setLoading(true);
+        setProgress(0);
         try {
             const response = await goalsAPI.create({
                 title,
@@ -44,11 +64,13 @@ export default function NewGoalScreen({ navigation }: NewGoalScreenProps) {
                 start_date: startDate || undefined,
                 use_ai: useAI,
             });
-            navigation.navigate('CalendarView', { goalId: response.id });
+            setProgress(100);
+            setTimeout(() => {
+                navigation.navigate('CalendarView', { goalId: response.id });
+            }, 500); // small delay to see 100% completion
         } catch (error) {
             console.error('Failed to create goal:', error);
             Alert.alert('Error', 'Failed to create goal. Please try again.');
-        } finally {
             setLoading(false);
         }
     };
@@ -58,6 +80,45 @@ export default function NewGoalScreen({ navigation }: NewGoalScreenProps) {
         if (step === 2) return totalDays >= 1 && totalDays <= 365;
         return true;
     };
+
+    // Render Generation Loading Screen
+    if (loading) {
+        return (
+            <LinearGradient
+                colors={['#0284c7', '#0ea5e9', '#2563eb']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.gradient}
+            >
+                <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="large" color={COLORS.white} />
+                    <Text style={styles.loadingTitle}>
+                        {useAI ? 'Generating AI Plan...' : 'Creating Goal...'}
+                    </Text>
+
+                    {useAI && (
+                        <>
+                            <Text style={styles.loadingSubtitle}>
+                                We are crafting {totalDays} unique days of content just for you. This might take a few moments.
+                            </Text>
+
+                            <View style={styles.generationProgressTrack}>
+                                <View
+                                    style={[
+                                        styles.generationProgressFill,
+                                        { width: `${Math.min(progress, 100)}%` }
+                                    ]}
+                                />
+                            </View>
+                            <Text style={styles.loadingPercentage}>
+                                {Math.floor(Math.min(progress, 100))}%
+                            </Text>
+                        </>
+                    )}
+                </View>
+            </LinearGradient>
+        );
+    }
 
     return (
         <LinearGradient
@@ -654,5 +715,46 @@ const styles = StyleSheet.create({
         color: COLORS.white,
         fontSize: 15,
         fontWeight: '600',
+    },
+
+    // Generation Loading State
+    loadingContainer: {
+        flex: 1,
+        justifyContent: 'center',
+        alignItems: 'center',
+        paddingHorizontal: SPACING['3xl'],
+        gap: SPACING.md,
+    },
+    loadingTitle: {
+        fontSize: 24,
+        fontWeight: '800',
+        color: COLORS.white,
+        marginTop: SPACING.lg,
+        textAlign: 'center',
+    },
+    loadingSubtitle: {
+        fontSize: 15,
+        color: 'rgba(255, 255, 255, 0.8)',
+        textAlign: 'center',
+        paddingHorizontal: SPACING.lg,
+        lineHeight: 22,
+    },
+    generationProgressTrack: {
+        width: '100%',
+        height: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+        borderRadius: 6,
+        marginTop: SPACING.xl,
+        overflow: 'hidden',
+    },
+    generationProgressFill: {
+        height: '100%',
+        backgroundColor: COLORS.white,
+        borderRadius: 6,
+    },
+    loadingPercentage: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: COLORS.white,
     },
 });

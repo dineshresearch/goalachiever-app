@@ -48,6 +48,7 @@ async def create_goal(
     if not topics or len(topics) < new_goal.total_days:
         topics = [f"Daily progress for {new_goal.title}" for i in range(new_goal.total_days)]
 
+    day_plans = []
     for i in range(new_goal.total_days):
         day_date = start_date + timedelta(days=i)
         topic = topics[i]
@@ -60,9 +61,34 @@ async def create_goal(
             content=None,
             completed=False
         )
+        day_plans.append(day_plan)
         db.add(day_plan)
         
     db.commit()
+
+    # If AI requested, generate all daily contents concurrently
+    if goal_data.use_ai:
+        import asyncio
+        async def fetch_day_content(dp: DayPlan):
+            try:
+                result = await ai_generator.generate_daily_content(
+                    new_goal.title,
+                    new_goal.description,
+                    dp.day_number,
+                    dp.topic
+                )
+                dp.content = result
+            except Exception as e:
+                print(f"Failed to generate content for Day {dp.day_number}: {e}")
+        
+        # Batch max 10 to avoid rapid rate limits on free Gemini tier
+        batch_size = 10
+        for i in range(0, len(day_plans), batch_size):
+            batch = day_plans[i:i + batch_size]
+            await asyncio.gather(*(fetch_day_content(dp) for dp in batch))
+            
+        db.commit()
+    
     return new_goal
 
 @router.get("", response_model=list[GoalResponse])

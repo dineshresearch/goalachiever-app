@@ -50,7 +50,8 @@ async def get_dynamic_plan_content(
     db: Session = Depends(get_db)
 ):
     """
-    Get day plan with dynamically generated LLM content for the specific day.
+    Get day plan. LLM content is now pre-generated at Goal Creation, 
+    so this just fetches the DB record.
     """
     try:
         target_date = date.fromisoformat(plan_date)
@@ -71,27 +72,6 @@ async def get_dynamic_plan_content(
             detail=f"No plan found for date {plan_date}"
         )
 
-    goal = db.query(Goal).filter(Goal.id == plan.goal_id).first()
-    
-    # Try to generate dynamic content
-    dynamic_success = False
-    try:
-        if plan.topic:
-            content = await ai_generator.generate_daily_content(
-                goal.title,
-                goal.description,
-                plan.day_number,
-                plan.topic
-            )
-            # We save it to DB so it doesn't need to regenerate if visited again?
-            # User requirement: "generate content... whenever you go to this page show that content"
-            # It's better to save to avoid wasting API calls every refresh.
-            plan.content = content
-            db.commit()
-            dynamic_success = True
-    except Exception as e:
-        print(f"Dynamic generation failed: {e}")
-
     result = {
         "id": plan.id,
         "goal_id": plan.goal_id,
@@ -102,7 +82,7 @@ async def get_dynamic_plan_content(
         "completed": plan.completed,
         "completed_at": plan.completed_at,
         "created_at": plan.created_at,
-        "dynamic": dynamic_success
+        "dynamic": bool(plan.content)
     }
     
     return result

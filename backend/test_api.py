@@ -23,7 +23,7 @@ async def test():
             'description': 'testing ai generated plans', 
             'total_days': 3, 
             'use_ai': True
-        }, headers=headers, timeout=20.0)
+        }, headers=headers, timeout=60.0)
         
         if goal_res.status_code != 201:
             print('Goal creation failed:', goal_res.status_code, goal_res.text)

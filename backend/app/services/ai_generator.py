@@ -36,28 +36,24 @@ The user has set a goal: '{title}'.{desc_text}
 Duration: {total_days} days.
 
 Create a HIGH-LEVEL daily progression for this goal.
-For example, if the goal is "loose weight", provide progressing daily topics focusing on diet and exercise.
-
 Return EXACTLY a JSON array of strings, where each string is the topic for that day.
 The array MUST have exactly {total_days} elements.
 Do NOT include any markdown blocks other than the JSON itself.
-Example format:
-[
-  "Day 1: Introduction, assessing current state, light walk",
-  "Day 2: ...",
-  ...
-]
 """
         full_prompt = "You are an expert planner and coach.\n\nUser request: " + prompt
         try:
             content = await self._call_gemini_api(full_prompt)
-            # Find json block
-            if "```json" in content:
-                content = content.split("```json")[-1].split("```")[0]
-            elif "```" in content:
-                content = content.split("```")[-1].split("```")[0]
+            # Clean up potential markdown formatting natively
+            content = content.strip()
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
             
-            topics = json.loads(content.strip())
+            topics = json.loads(content)
             if isinstance(topics, list) and len(topics) > 0:
                 # pad or truncate if needed
                 if len(topics) > total_days:
@@ -66,7 +62,8 @@ Example format:
                     topics.append(f"Continued progress for {title}")
                 return topics
         except Exception as e:
-            print(f"Outline generation failed: {e}")
+            print(f"Outline generation JSON parsing failed: {e}")
+            print(f"FAILED RAW CONTENT:\n{content}")
             
         # Fallback deterministic topics
         return [f"Day {i+1}: Work on {title}" for i in range(total_days)]
@@ -99,12 +96,16 @@ Return ONLY the JSON object. No other text.
         content = ""
         try:
             content = await self._call_gemini_api(full_prompt)
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0]
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0]
+            content = content.strip()
+            if content.startswith("```json"):
+                content = content[7:]
+            if content.startswith("```"):
+                content = content[3:]
+            if content.endswith("```"):
+                content = content[:-3]
+            content = content.strip()
                 
-            data = json.loads(content.strip())
+            data = json.loads(content)
             return {
                 "overview": data.get("overview", f"Focus on: {topic}"),
                 "tasks": data.get("tasks", []),
@@ -112,7 +113,8 @@ Return ONLY the JSON object. No other text.
                 "tips": data.get("tips", "")
             }
         except Exception as e:
-            print(f"Daily content generation failed: {e}, Content: {content}")
+            print(f"Daily content JSON parsing failed: {e}")
+            print(f"FAILED RAW CONTENT:\n{content}")
             return {
                 "overview": f"Focus on: {topic}",
                 "tasks": [f"Work on {topic}"],
