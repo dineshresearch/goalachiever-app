@@ -29,19 +29,19 @@ export default function NewGoalScreen({ navigation }: NewGoalScreenProps) {
 
     // Form data
     const [title, setTitle] = useState('');
-    const [totalDays, setTotalDays] = useState(90);
+    const [description, setDescription] = useState('');
+    const [totalDays, setTotalDays] = useState(30);
     const [startDate, setStartDate] = useState('');
-    const [useAI, setUseAI] = useState(false);
-    const [focuses, setFocuses] = useState(['dsa', 'system_design', 'genai']);
+    const [useAI, setUseAI] = useState(true);
 
     const handleSubmit = async () => {
         setLoading(true);
         try {
             const response = await goalsAPI.create({
                 title,
+                description,
                 total_days: totalDays,
                 start_date: startDate || undefined,
-                focuses,
                 use_ai: useAI,
             });
             navigation.navigate('CalendarView', { goalId: response.id });
@@ -54,25 +54,10 @@ export default function NewGoalScreen({ navigation }: NewGoalScreenProps) {
     };
 
     const canProceed = () => {
-        if (step === 1) return title.length > 0;
+        if (step === 1) return title.trim().length > 0;
         if (step === 2) return totalDays >= 1 && totalDays <= 365;
-        if (step === 3) return focuses.length > 0;
         return true;
     };
-
-    const toggleFocus = (focus: string) => {
-        if (focuses.includes(focus)) {
-            setFocuses(focuses.filter((f) => f !== focus));
-        } else {
-            setFocuses([...focuses, focus]);
-        }
-    };
-
-    const focusItems = [
-        { id: 'dsa', name: 'Data Structures & Algorithms', desc: 'Coding problems and patterns', icon: 'code-slash' as const },
-        { id: 'system_design', name: 'System Design', desc: 'Architecture and scalability', icon: 'git-network-outline' as const },
-        { id: 'genai', name: 'Generative AI', desc: 'LLMs and AI concepts', icon: 'sparkles' as const },
-    ];
 
     return (
         <LinearGradient
@@ -95,7 +80,7 @@ export default function NewGoalScreen({ navigation }: NewGoalScreenProps) {
                 {/* Progress Bar */}
                 <View style={styles.progressContainer}>
                     <View style={styles.progressBar}>
-                        {[1, 2, 3, 4].map((s) => (
+                        {[1, 2, 3].map((s) => (
                             <View
                                 key={s}
                                 style={[
@@ -105,7 +90,7 @@ export default function NewGoalScreen({ navigation }: NewGoalScreenProps) {
                             />
                         ))}
                     </View>
-                    <Text style={styles.progressText}>Step {step} of 4</Text>
+                    <Text style={styles.progressText}>Step {step} of 3</Text>
                 </View>
 
                 {/* Card Container */}
@@ -118,15 +103,24 @@ export default function NewGoalScreen({ navigation }: NewGoalScreenProps) {
                                     <Ionicons name="flag" size={28} color={COLORS.white} />
                                 </LinearGradient>
                                 <Text style={styles.stepTitle}>What's your goal?</Text>
-                                <Text style={styles.stepSubtitle}>Give your learning journey a clear, motivating title</Text>
+                                <Text style={styles.stepSubtitle}>E.g. "Lose weight", "Learn Python", "Run 5k"</Text>
                             </View>
                             <TextInput
                                 style={styles.titleInput}
                                 value={title}
                                 onChangeText={setTitle}
-                                placeholder="e.g., AI Architect Interview Preparation"
+                                placeholder="E.g. Lose weight"
                                 placeholderTextColor={COLORS.slate[400]}
                                 autoFocus
+                            />
+                            <TextInput
+                                style={styles.descInput}
+                                value={description}
+                                onChangeText={setDescription}
+                                placeholder="Any specific details? (e.g. Vegetarian diet, no gym access)"
+                                placeholderTextColor={COLORS.slate[400]}
+                                multiline
+                                numberOfLines={3}
                             />
                             {title.length > 0 && (
                                 <Text style={styles.feedbackText}>
@@ -198,55 +192,10 @@ export default function NewGoalScreen({ navigation }: NewGoalScreenProps) {
                         </View>
                     )}
 
-                    {/* Step 3: Focus Areas */}
+
+
+                    {/* Step 3: AI Options */}
                     {step === 3 && (
-                        <View style={styles.stepContent}>
-                            <View style={styles.stepHeader}>
-                                <LinearGradient colors={COLORS.gradients.purple} style={styles.stepIcon}>
-                                    <Ionicons name="checkmark-circle" size={28} color={COLORS.white} />
-                                </LinearGradient>
-                                <Text style={styles.stepTitle}>What to focus on?</Text>
-                                <Text style={styles.stepSubtitle}>Select the areas you want to master</Text>
-                            </View>
-
-                            <View style={styles.focusList}>
-                                {focusItems.map((focus) => {
-                                    const isSelected = focuses.includes(focus.id);
-                                    return (
-                                        <TouchableOpacity
-                                            key={focus.id}
-                                            onPress={() => toggleFocus(focus.id)}
-                                            style={[
-                                                styles.focusItem,
-                                                isSelected && styles.focusItemSelected,
-                                            ]}
-                                            activeOpacity={0.7}
-                                        >
-                                            <View style={styles.focusRow}>
-                                                <View
-                                                    style={[
-                                                        styles.focusCheckbox,
-                                                        isSelected && styles.focusCheckboxSelected,
-                                                    ]}
-                                                >
-                                                    {isSelected && (
-                                                        <Ionicons name="checkmark" size={14} color={COLORS.white} />
-                                                    )}
-                                                </View>
-                                                <View style={styles.focusInfo}>
-                                                    <Text style={styles.focusName}>{focus.name}</Text>
-                                                    <Text style={styles.focusDesc}>{focus.desc}</Text>
-                                                </View>
-                                            </View>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </View>
-                        </View>
-                    )}
-
-                    {/* Step 4: AI Options */}
-                    {step === 4 && (
                         <View style={styles.stepContent}>
                             <View style={styles.stepHeader}>
                                 <LinearGradient colors={COLORS.gradients.pink} style={styles.stepIcon}>
@@ -299,13 +248,10 @@ export default function NewGoalScreen({ navigation }: NewGoalScreenProps) {
                                     <Text style={styles.summaryValue}>{totalDays} days</Text>
                                 </View>
                                 <View style={styles.summaryRow}>
-                                    <Text style={styles.summaryLabel}>Focus Areas:</Text>
-                                    <Text style={styles.summaryValue}>{focuses.length} selected</Text>
-                                </View>
-                                <View style={styles.summaryRow}>
                                     <Text style={styles.summaryLabel}>Generation:</Text>
                                     <Text style={styles.summaryValue}>{useAI ? 'AI-Enhanced' : 'Standard'}</Text>
                                 </View>
+
                             </View>
                         </View>
                     )}
@@ -331,7 +277,7 @@ export default function NewGoalScreen({ navigation }: NewGoalScreenProps) {
                             </TouchableOpacity>
                         )}
 
-                        {step < 4 ? (
+                        {step < 3 ? (
                             <TouchableOpacity
                                 onPress={() => setStep(step + 1)}
                                 disabled={!canProceed()}
@@ -458,7 +404,6 @@ const styles = StyleSheet.create({
         textAlign: 'center',
     },
 
-    // Step 1
     titleInput: {
         borderWidth: 2,
         borderColor: COLORS.slate[200],
@@ -467,6 +412,18 @@ const styles = StyleSheet.create({
         paddingHorizontal: SPACING.lg,
         fontSize: 16,
         color: COLORS.slate[900],
+    },
+    descInput: {
+        borderWidth: 2,
+        borderColor: COLORS.slate[200],
+        borderRadius: RADIUS.lg,
+        paddingVertical: SPACING.md,
+        paddingHorizontal: SPACING.lg,
+        fontSize: 14,
+        color: COLORS.slate[900],
+        minHeight: 80,
+        textAlignVertical: 'top',
+        marginTop: SPACING.sm,
     },
     feedbackText: {
         fontSize: 13,
