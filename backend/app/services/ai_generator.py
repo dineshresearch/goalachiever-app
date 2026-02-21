@@ -8,7 +8,7 @@ class AIPlanGenerator:
     
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={self.api_key}"
+        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={self.api_key}"
 
     async def _call_gemini_api(self, prompt: str) -> str:
         """Call the Gemini API with a text prompt"""
