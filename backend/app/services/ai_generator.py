@@ -8,7 +8,7 @@ class AIPlanGenerator:
     
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent?key={self.api_key}"
+        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key={self.api_key}"
 
     async def _call_gemini_api(self, prompt: str) -> str:
         """Call the Gemini API with a text prompt"""
@@ -18,7 +18,11 @@ class AIPlanGenerator:
         payload = {
             "contents": [{
                 "parts": [{"text": prompt}]
-            }]
+            }],
+            "generationConfig": {
+                "temperature": 0.7,
+                "maxOutputTokens": 2000,
+            }
         }
         
         async with httpx.AsyncClient(timeout=30.0) as client:
@@ -58,8 +62,9 @@ Example format:
   ...
 ]
 """
+        full_prompt = "You are an expert planner and coach.\n\nUser request: " + prompt
         try:
-            content = await self._call_gemini_api(prompt)
+            content = await self._call_gemini_api(full_prompt)
             # Find json block
             if "```json" in content:
                 content = content.split("```json")[-1].split("```")[0]
@@ -104,9 +109,10 @@ Format as a detailed, well-structured JSON object like this:
 
 Return ONLY the JSON object. No other text.
 """
+        full_prompt = "You are an expert coach and planner.\n\nUser request: " + prompt
         content = ""
         try:
-            content = await self._call_gemini_api(prompt)
+            content = await self._call_gemini_api(full_prompt)
             if "```json" in content:
                 content = content.split("```json")[1].split("```")[0]
             elif "```" in content:
