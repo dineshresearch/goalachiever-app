@@ -32,6 +32,7 @@ class GoalCreateRequest(BaseModel):
     description: Optional[str] = Field(None, description="Detailed description of the goal")
     total_days: int = Field(..., ge=1, le=365)
     start_date: Optional[str] = Field(None)
+    use_ai: Optional[bool] = Field(False)
 
 class GoalResponse(BaseModel):
     id: str
