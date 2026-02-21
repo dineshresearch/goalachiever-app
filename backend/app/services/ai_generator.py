@@ -1,6 +1,6 @@
 import json
-import httpx
 from typing import Dict, Any, List
+from google import genai
 from app.config import settings
 
 class AIPlanGenerator:
@@ -8,39 +8,25 @@ class AIPlanGenerator:
     
     def __init__(self):
         self.api_key = settings.GEMINI_API_KEY
-        self.api_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={self.api_key}"
+        if self.api_key:
+            self.client = genai.Client(api_key=self.api_key)
+        else:
+            self.client = None
 
     async def _call_gemini_api(self, prompt: str) -> str:
         """Call the Gemini API with a text prompt"""
-        if not self.api_key:
+        if not self.client:
             return "AI service not configured: GEMINI_API_KEY is missing."
             
-        payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }],
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 2000,
-            }
-        }
-        
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            try:
-                response = await client.post(self.api_url, json=payload)
-                response.raise_for_status()
-                data = response.json()
-                
-                # Extract text response from Gemini's JSON structure
-                if "candidates" in data and len(data["candidates"]) > 0:
-                    parts = data["candidates"][0].get("content", {}).get("parts", [])
-                    if parts:
-                        return parts[0].get("text", "")
-                
-                return ""
-            except Exception as e:
-                print(f"Gemini API Error: {str(e)}")
-                raise
+        try:
+            response = await self.client.aio.models.generate_content(
+                model='gemini-3-flash-preview',
+                contents=prompt
+            )
+            return response.text
+        except Exception as e:
+            print(f"Gemini API Error: {str(e)}")
+            raise
 
     async def generate_goal_outline(self, title: str, description: str, total_days: int) -> List[str]:
         """Generate an outline of daily topics for the entire goal duration."""
